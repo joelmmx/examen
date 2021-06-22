@@ -15,6 +15,7 @@ import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.activity_main.*
 import okhttp3.*
 import java.io.IOException
+import java.lang.Exception
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
@@ -41,7 +42,11 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+
+    var loading =false
+
     fun callProductosService(){
+        loading = true
         val client = OkHttpClient.Builder()
             .connectTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
@@ -64,25 +69,33 @@ class MainActivity : AppCompatActivity() {
                     error.visibility = View.VISIBLE
                     error.text = e.toString()
                 }
+                loading = false
             }
 
             override fun onResponse(call: Call, response: Response) {
-                Log.d(TAG,"Response")
-                page++;
-                val bodyResponse = response.body()?.string()
-                Log.d(TAG, "bodyResponseUbicacion: $bodyResponse")
-                val productos = Gson().fromJson(bodyResponse,Productos::class.java)
-                listProductos.addAll(productos.productDetails)
-                Log.d(TAG , "listProductos.size: ${listProductos.size}")
-                for (producto in listProductos){
-                    Log.d(TAG,"Producto: $producto")
+                try {
+                    Log.d(TAG,"Response")
+                    page++;
+                    val bodyResponse = response.body()?.string()
+                    Log.d(TAG, "bodyResponseUbicacion: $bodyResponse")
+                    val productos = Gson().fromJson(bodyResponse,Productos::class.java)
+                    listProductos.addAll(productos.productDetails)
+                    Log.d(TAG , "listProductos.size: ${listProductos.size}")
+                    for (producto in listProductos){
+                        Log.d(TAG,"Producto: $producto")
+                    }
+                    runOnUiThread{
+                        productosAdapter = ProductoAdapter(productos.productDetails.toMutableList())
+                        rv_productos.setAdapter(productosAdapter)
+                        setRecyclerViewScrollListener()
+                        error.visibility = View.GONE
+                    }
+                    loading = false
+                }catch (e:Exception){
+                    e.printStackTrace()
+                    loading = false
                 }
-                Log.d(TAG,productos.domainCode)
-                runOnUiThread{
-                    productosAdapter = ProductoAdapter(productos.productDetails.toMutableList())
-                    rv_productos.setAdapter(productosAdapter)
-                    setRecyclerViewScrollListener()
-                }
+
 
             }
 
@@ -102,9 +115,9 @@ class MainActivity : AppCompatActivity() {
         rv_productos.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
-//              if(position>pageSize*page-2) {
-//
-//              }
+              if(lastVisibleItemPosition>pageSize-2&&!loading) {
+                callProductosService()
+              }
                 Log.d(TAG,"newState: ${newState}")
                 Log.d(TAG,"lastVisibleItemPosition ${lastVisibleItemPosition}")
             }

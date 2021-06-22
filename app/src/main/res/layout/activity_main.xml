@@ -36,7 +36,8 @@
         android:layout_height="wrap_content"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/button"></TextView>
+        app:layout_constraintTop_toBottomOf="@id/button"
+        android:textColor="#ff0000"></TextView>
 
 
     <LinearLayout
