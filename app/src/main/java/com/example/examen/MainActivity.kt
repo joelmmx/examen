@@ -1,18 +1,17 @@
 package com.example.examen
 
-import android.content.Context
-import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
+import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.activity_main.*
 import okhttp3.*
 import java.io.IOException
@@ -54,7 +53,7 @@ class MainActivity : AppCompatActivity() {
 
         val callback = object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                //Mostrar Error
+                Log.d(TAG,"Error en el Servicios: $e")
             }
 
             override fun onResponse(call: Call, response: Response) {
@@ -72,6 +71,8 @@ class MainActivity : AppCompatActivity() {
                 }
 
             }
+
+
 
         }
         call = client.newCall(request)
@@ -106,25 +107,29 @@ class MainActivity : AppCompatActivity() {
     inner class ProductoHolder(productoView: View) : RecyclerView.ViewHolder(productoView), View.OnClickListener {
         private val mTitleTextView: TextView
         private val mPrice: TextView
+        private val mImage : ImageView
         private var mProducto: Producto? = null
         fun bindUbicacion(producto: Producto) {
             mTitleTextView.text = producto.title
             if(producto.primaryOffer.listPrice != null)
-                mPrice.text         = producto.primaryOffer.listPrice.toString()
+                mPrice.text         = "$ ${producto.primaryOffer.listPrice}"
             else if(producto.primaryOffer.offerPrice != null)
-                mPrice.text         = producto.primaryOffer.offerPrice.toString()
+                mPrice.text         = "$ ${producto.primaryOffer.offerPrice}"
             else if(producto.primaryOffer.maxPrice != null)
-                mPrice.text         = producto.primaryOffer.maxPrice.toString()
+                mPrice.text         = "$ ${producto.primaryOffer.maxPrice}"
             else if(producto.primaryOffer.minPrice != null)
-                mPrice.text         = producto.primaryOffer.minPrice.toString()
+                mPrice.text         = "$ ${producto.primaryOffer.minPrice}"
             else
                 mPrice.text         = "N/A"
+            Picasso.get().load(producto.imageUrl).resize(250, 250).into(mImage)
+
             mProducto = producto
         }
 
         init {
             mTitleTextView = productoView.findViewById(R.id.tv_title)
             mPrice = productoView.findViewById(R.id.tv_price)
+            mImage   = productoView.findViewById(R.id.tv_image)
         }
 
         override fun onClick(v: View?) {
