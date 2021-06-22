@@ -26,7 +26,7 @@ class MainActivity : AppCompatActivity() {
     val url = "https://00672285.us-south.apigw.appdomain.cloud/demo-gapsi/search"
     var page = 0
     var call : Call? = null
-    val pageSize = 40
+    var pageSize = Integer(40)
     var productosAdapter : ProductoAdapter? = null
     var listProductos = ArrayList<Producto>()
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,6 +79,7 @@ class MainActivity : AppCompatActivity() {
                     val bodyResponse = response.body()?.string()
                     Log.d(TAG, "bodyResponseUbicacion: $bodyResponse")
                     val productos = Gson().fromJson(bodyResponse,Productos::class.java)
+                    pageSize = productos.numberOfProducts
                     listProductos.addAll(productos.productDetails)
                     Log.d(TAG , "listProductos.size: ${listProductos.size}")
                     for (producto in listProductos){
@@ -115,7 +116,7 @@ class MainActivity : AppCompatActivity() {
         rv_productos.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
-              if(lastVisibleItemPosition>pageSize-2&&!loading) {
+              if(lastVisibleItemPosition>pageSize.toInt()-2&&!loading) {
                 callProductosService()
               }
                 Log.d(TAG,"newState: ${newState}")
