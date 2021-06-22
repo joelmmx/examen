@@ -17,25 +17,31 @@ import okhttp3.*
 import java.io.IOException
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.collections.ArrayList
 
 
 class MainActivity : AppCompatActivity() {
     val TAG = "MainActivity"
     val url = "https://00672285.us-south.apigw.appdomain.cloud/demo-gapsi/search"
-    val page = 1
+    var page = 0
     var call : Call? = null
+    val pageSize = 40
     var productosAdapter : ProductoAdapter? = null
+    var listProductos = ArrayList<Producto>()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        error.visibility = View.GONE
+        linearLayoutManager = LinearLayoutManager(this)
+        rv_productos.layoutManager = linearLayoutManager
         button.setOnClickListener {
             Log.d(TAG, "Click on Button with find: ${tv_find.text}")
-            callUbicacionService()
+            callProductosService()
         }
 
     }
 
-    fun callUbicacionService(){
+    fun callProductosService(){
         val client = OkHttpClient.Builder()
             .connectTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
@@ -43,7 +49,7 @@ class MainActivity : AppCompatActivity() {
             .build()
         val urlBuilder = HttpUrl.parse(url)!!.newBuilder()
         urlBuilder.addQueryParameter("query", tv_find.text!!.trim().toString())
-        urlBuilder.addQueryParameter("page", page.toString())
+        urlBuilder.addQueryParameter("page", (page+1).toString())
         val finalUrl = urlBuilder.build().toString()
         Log.d(TAG,"finalUrl: ${finalUrl}")
         val request = Request.Builder()
@@ -54,20 +60,28 @@ class MainActivity : AppCompatActivity() {
         val callback = object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.d(TAG,"Error en el Servicios: $e")
+                runOnUiThread {
+                    error.visibility = View.VISIBLE
+                    error.text = e.toString()
+                }
             }
 
             override fun onResponse(call: Call, response: Response) {
+                Log.d(TAG,"Response")
+                page++;
                 val bodyResponse = response.body()?.string()
                 Log.d(TAG, "bodyResponseUbicacion: $bodyResponse")
                 val productos = Gson().fromJson(bodyResponse,Productos::class.java)
-                for (producto in productos.productDetails){
+                listProductos.addAll(productos.productDetails)
+                Log.d(TAG , "listProductos.size: ${listProductos.size}")
+                for (producto in listProductos){
                     Log.d(TAG,"Producto: $producto")
                 }
                 Log.d(TAG,productos.domainCode)
                 runOnUiThread{
-                    rv_productos.setLayoutManager(LinearLayoutManager(applicationContext))
                     productosAdapter = ProductoAdapter(productos.productDetails.toMutableList())
                     rv_productos.setAdapter(productosAdapter)
+                    setRecyclerViewScrollListener()
                 }
 
             }
@@ -79,13 +93,33 @@ class MainActivity : AppCompatActivity() {
         call?.enqueue(callback)
     }
 
+    private lateinit var linearLayoutManager: LinearLayoutManager
+
+    private val lastVisibleItemPosition: Int
+        get() = linearLayoutManager.findLastVisibleItemPosition()
+
+    private fun setRecyclerViewScrollListener() {
+        rv_productos.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+//              if(position>pageSize*page-2) {
+//
+//              }
+                Log.d(TAG,"newState: ${newState}")
+                Log.d(TAG,"lastVisibleItemPosition ${lastVisibleItemPosition}")
+            }
+        })
+    }
+
     inner class ProductoAdapter(private val mProductos: MutableList<Producto>) : RecyclerView.Adapter<ProductoHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductoHolder {
             return ProductoHolder(LayoutInflater.from(applicationContext).inflate(R.layout.product_holder, parent, false))
         }
 
         override fun onBindViewHolder(holder: ProductoHolder, position: Int) {
-            holder.bindUbicacion(mProductos[position])
+            Log.d(TAG , "position: ${position}")
+            holder.bindProducto(mProductos[position])
+
         }
 
         override fun getItemCount(): Int {
@@ -109,7 +143,7 @@ class MainActivity : AppCompatActivity() {
         private val mPrice: TextView
         private val mImage : ImageView
         private var mProducto: Producto? = null
-        fun bindUbicacion(producto: Producto) {
+        fun bindProducto(producto: Producto) {
             mTitleTextView.text = producto.title
             if(producto.primaryOffer.listPrice != null)
                 mPrice.text         = "$ ${producto.primaryOffer.listPrice}"
